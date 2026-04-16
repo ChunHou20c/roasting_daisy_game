@@ -163,17 +163,15 @@ const DEFAULT_ROASTS = [
   'somewhere, a botanist is crying'
 ];
 let roasts = DEFAULT_ROASTS;
+let roastsFile = 'roasts.json';
 let choices = ['yes', 'no', 'maybe'];
 let mode = 'sequence';
 let petalMin = 13, petalMax = 34, doubleChance = 20;
 let N = 21, remaining = 0, clickCount = 0, msgTimer;
 
 async function loadRoasts() {
-  const p = new URLSearchParams(window.location.search);
-  const name = p.get('roasts');
-  const file = name && /^[a-z0-9_-]+\.json$/i.test(name) ? name : 'roasts.json';
   try {
-    const res = await fetch(file);
+    const res = await fetch(roastsFile);
     if (!res.ok) return;
     const data = await res.json();
     if (Array.isArray(data)) {
@@ -222,6 +220,7 @@ function buildShareUrl() {
   params.set('pmin', petalMin);
   params.set('pmax', petalMax);
   params.set('double', doubleChance);
+  if (roastsFile !== 'roasts.json') params.set('roasts', roastsFile);
   return window.location.href.split('?')[0] + '?' + params.toString();
 }
 function updateShareUrl() { shareUrlEl.value = buildShareUrl(); }
@@ -236,6 +235,10 @@ function loadFromUrl() {
   if (p.has('pmin')) { petalMin = Math.max(5, Math.min(40, parseInt(p.get('pmin')) || 13)); petalMinSlider.value = petalMin; petalMinOut.textContent = petalMin; }
   if (p.has('pmax')) { petalMax = Math.max(5, Math.min(55, parseInt(p.get('pmax')) || 34)); petalMaxSlider.value = petalMax; petalMaxOut.textContent = petalMax; }
   if (p.has('double')) { doubleChance = Math.max(0, Math.min(100, parseInt(p.get('double')) || 20)); doubleSlider.value = doubleChance; doubleOut.textContent = doubleChance + '%'; }
+  if (p.has('roasts')) {
+    const name = p.get('roasts');
+    if (/^[a-z0-9_.-]+\.json$/i.test(name)) roastsFile = name;
+  }
   document.querySelectorAll('input[name="mode"]').forEach(r => r.checked = r.value === mode);
 }
 
