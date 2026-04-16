@@ -2,6 +2,8 @@
 
 A digital take on "she loves me, she loves me not" — except the flower also roasts you for needing a flower to make your decisions.
 
+**Try it:** [chunhou20c.github.io/roasting_daisy_game](https://chunhou20c.github.io/roasting_daisy_game/)
+
 ## what it's for
 
 You're stuck on a choice: lunch, career, Saturday plans, whether to text them back. Your brain has locked up and "flip a coin" isn't dramatic enough.
@@ -49,4 +51,4 @@ Opening `index.html` directly over `file://` mostly works, but `fetch('roasts.js
 
 ## deploying
 
-`.github/workflows/pages.yml` deploys `public/` to GitHub Pages on every push to `main`. In repo **Settings → Pages**, set the source to **GitHub Actions**.
+`.github/workflows/pages.yml` deploys `public/` to GitHub Pages on every push to `main`. In repo **Settings → Pages**, set the source to **GitHub Actions**. The live site is at [chunhou20c.github.io/roasting_daisy_game](https://chunhou20c.github.io/roasting_daisy_game/).
