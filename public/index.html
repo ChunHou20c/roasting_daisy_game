@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daisy petal game</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #fafaf8; color: #1a1a18; }
+  #app { display: flex; flex-direction: column; max-width: 680px; margin: 0 auto; }
+  #settings {
+    padding: 16px 20px; border-bottom: 0.5px solid rgba(0,0,0,0.12);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #settings-header { display: flex; align-items: center; justify-content: space-between; }
+  #settings-title { font-size: 13px; font-weight: 500; color: #666; }
+  #toggle-settings {
+    font-size: 12px; color: #666; background: none;
+    border: 0.5px solid rgba(0,0,0,0.18); border-radius: 6px; padding: 3px 10px; cursor: pointer;
+  }
+  #toggle-settings:hover { background: #f0efe8; }
+  #choices-panel { display: flex; flex-direction: column; gap: 10px; }
+  #choices-list { display: flex; flex-direction: column; gap: 6px; }
+  .choice-row { display: flex; align-items: center; gap: 8px; }
+  .choice-row input {
+    flex: 1; font-size: 13px; padding: 5px 10px; height: 32px;
+    border: 0.5px solid rgba(0,0,0,0.25); border-radius: 6px;
+    background: #fff; color: #1a1a18; font-family: inherit; outline: none;
+  }
+  .choice-row input:focus { border-color: rgba(0,0,0,0.5); }
+  .remove-btn {
+    width: 24px; height: 24px; border-radius: 50%; border: 0.5px solid rgba(0,0,0,0.15);
+    background: none; cursor: pointer; font-size: 14px; color: #666;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .remove-btn:hover { background: #f0efe8; }
+  .settings-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .settings-row label { font-size: 12px; color: #666; }
+  .mode-opt { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #666; cursor: pointer; }
+  .slider-row { display: flex; align-items: center; gap: 8px; }
+  .slider-row input[type=range] { width: 80px; accent-color: #c89610; }
+  .slider-row span { font-size: 12px; color: #666; min-width: 28px; }
+  #settings-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  #add-choice-btn {
+    font-size: 12px; color: #666; background: none;
+    border: 0.5px solid rgba(0,0,0,0.15); border-radius: 6px; padding: 4px 12px; cursor: pointer; font-family: inherit;
+  }
+  #add-choice-btn:hover { background: #f0efe8; }
+  #apply-btn {
+    font-size: 12px; font-weight: 500; color: #1a1a18; background: #f0efe8;
+    border: 0.5px solid rgba(0,0,0,0.2); border-radius: 6px; padding: 4px 14px; cursor: pointer; font-family: inherit;
+  }
+  #apply-btn:hover { background: #e4e3db; }
+  #share-row {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    background: #f5f4ee; border-radius: 8px; border: 0.5px solid rgba(0,0,0,0.1);
+  }
+  #share-url {
+    flex: 1; font-family: monospace; font-size: 11px; color: #888;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: none; border: none; outline: none; cursor: text;
+  }
+  #copy-btn {
+    font-size: 11px; font-weight: 500; color: #1a1a18; background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.2); border-radius: 5px;
+    padding: 3px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0; font-family: inherit;
+  }
+  #copy-btn:hover { background: #f0efe8; }
+  #copy-btn.copied { color: #2a7a3a; border-color: #2a7a3a; }
+  #stage { position: relative; width: 100%; height: 480px; overflow: hidden; background: #fafaf8; }
+  #flowerSvg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  .falling-petal { position: absolute; pointer-events: none; }
+  #message {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    font-size: 15px; font-weight: 500; font-family: inherit; color: #1a1a18;
+    background: #fff; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 999px;
+    padding: 6px 20px; opacity: 0; transition: opacity 0.4s;
+    pointer-events: none; white-space: nowrap; max-width: 90%;
+  }
+  #counter {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    font-size: 13px; color: #888; white-space: nowrap;
+  }
+  #resetBtn {
+    position: absolute; top: 8px; right: 12px; font-size: 12px; color: #888;
+    background: none; border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: inherit;
+  }
+  #resetBtn:hover { background: #f0efe8; }
+  .petal-g { cursor: pointer; }
+  .petal-g:hover path { opacity: 0.75; }
+  .double-flash { animation: flash 0.35s ease-out; }
+  @keyframes flash { 0%{opacity:1} 50%{opacity:0.3} 100%{opacity:1} }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="settings">
+    <div id="settings-header">
+      <span id="settings-title">choices</span>
+      <button id="toggle-settings">hide</button>
+    </div>
+    <div id="choices-panel">
+      <div class="settings-row">
+        <label>order:</label>
+        <label class="mode-opt"><input type="radio" name="mode" value="sequence" checked> in sequence</label>
+        <label class="mode-opt"><input type="radio" name="mode" value="random"> random</label>
+      </div>
+      <div class="settings-row">
+        <label>petals:</label>
+        <label style="font-size:12px;color:#666;">min</label>
+        <div class="slider-row">
+          <input type="range" id="petal-min" min="5" max="40" value="13" step="1">
+          <span id="petal-min-out">13</span>
+        </div>
+        <label style="font-size:12px;color:#666;">max</label>
+        <div class="slider-row">
+          <input type="range" id="petal-max" min="5" max="55" value="34" step="1">
+          <span id="petal-max-out">34</span>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>double-drop chance:</label>
+        <div class="slider-row">
+          <input type="range" id="double-chance" min="0" max="100" value="20" step="1" style="width:100px;">
+          <span id="double-out">20%</span>
+        </div>
+      </div>
+      <div id="choices-list"></div>
+      <div id="settings-actions">
+        <button id="add-choice-btn">+ add choice</button>
+        <button id="apply-btn">apply &amp; reset</button>
+      </div>
+      <div id="share-row">
+        <input id="share-url" readonly value=""/>
+        <button id="copy-btn">copy link</button>
+      </div>
+    </div>
+  </div>
+  <div id="stage">
+    <div id="counter"></div>
+    <button id="resetBtn">reset</button>
+    <svg id="flowerSvg" width="360" height="360" viewBox="-180 -180 360 360" xmlns="http://www.w3.org/2000/svg">
+      <g id="petalsGroup"></g>
+      <circle id="centerOuter" cx="0" cy="0" r="30" fill="#f5c842" stroke="#c89610" stroke-width="1.5"/>
+      <circle id="centerInner" cx="0" cy="0" r="18" fill="#e6a800"/>
+    </svg>
+    <div id="message"></div>
+  </div>
+</div>
+
+<script>
+const PHI = Math.PI * (3 - Math.sqrt(5));
+let choices = ['yes', 'no', 'maybe'];
+let mode = 'sequence';
+let petalMin = 13, petalMax = 34, doubleChance = 20;
+let N = 21, remaining = 0, clickCount = 0, msgTimer;
+
+const svgEl = document.getElementById('flowerSvg');
+const group = document.getElementById('petalsGroup');
+const msgEl = document.getElementById('message');
+const counterEl = document.getElementById('counter');
+const stage = document.getElementById('stage');
+const choicesList = document.getElementById('choices-list');
+const shareUrlEl = document.getElementById('share-url');
+const copyBtn = document.getElementById('copy-btn');
+const petalMinSlider = document.getElementById('petal-min');
+const petalMaxSlider = document.getElementById('petal-max');
+const petalMinOut = document.getElementById('petal-min-out');
+const petalMaxOut = document.getElementById('petal-max-out');
+const doubleSlider = document.getElementById('double-chance');
+const doubleOut = document.getElementById('double-out');
+
+petalMinSlider.addEventListener('input', () => {
+  petalMin = parseInt(petalMinSlider.value);
+  if (petalMin > petalMax) { petalMax = petalMin; petalMaxSlider.value = petalMax; }
+  petalMinOut.textContent = petalMin; petalMaxOut.textContent = petalMax; updateShareUrl();
+});
+petalMaxSlider.addEventListener('input', () => {
+  petalMax = parseInt(petalMaxSlider.value);
+  if (petalMax < petalMin) { petalMin = petalMax; petalMinSlider.value = petalMin; }
+  petalMinOut.textContent = petalMin; petalMaxOut.textContent = petalMax; updateShareUrl();
+});
+doubleSlider.addEventListener('input', () => {
+  doubleChance = parseInt(doubleSlider.value);
+  doubleOut.textContent = doubleChance + '%'; updateShareUrl();
+});
+
+function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function buildShareUrl() {
+  const params = new URLSearchParams();
+  params.set('mode', mode);
+  params.set('choices', choices.join(','));
+  params.set('pmin', petalMin);
+  params.set('pmax', petalMax);
+  params.set('double', doubleChance);
+  return window.location.href.split('?')[0] + '?' + params.toString();
+}
+function updateShareUrl() { shareUrlEl.value = buildShareUrl(); }
+
+function loadFromUrl() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.has('choices')) {
+    const c = p.get('choices').split(',').map(s => s.trim()).filter(Boolean);
+    if (c.length) choices = c;
+  }
+  if (p.has('mode') && ['sequence','random'].includes(p.get('mode'))) mode = p.get('mode');
+  if (p.has('pmin')) { petalMin = Math.max(5, Math.min(40, parseInt(p.get('pmin')) || 13)); petalMinSlider.value = petalMin; petalMinOut.textContent = petalMin; }
+  if (p.has('pmax')) { petalMax = Math.max(5, Math.min(55, parseInt(p.get('pmax')) || 34)); petalMaxSlider.value = petalMax; petalMaxOut.textContent = petalMax; }
+  if (p.has('double')) { doubleChance = Math.max(0, Math.min(100, parseInt(p.get('double')) || 20)); doubleSlider.value = doubleChance; doubleOut.textContent = doubleChance + '%'; }
+  document.querySelectorAll('input[name="mode"]').forEach(r => r.checked = r.value === mode);
+}
+
+function getPhrase(i) {
+  if (!choices.length) return '';
+  return mode === 'random' ? choices[Math.floor(Math.random() * choices.length)] : choices[i % choices.length];
+}
+
+function renderChoicesList() {
+  choicesList.innerHTML = '';
+  choices.forEach((c, i) => {
+    const row = document.createElement('div'); row.className = 'choice-row';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = c; inp.placeholder = 'choice ' + (i + 1);
+    inp.addEventListener('input', () => { choices[i] = inp.value.trim(); updateShareUrl(); });
+    const btn = document.createElement('button'); btn.className = 'remove-btn'; btn.textContent = '×';
+    btn.addEventListener('click', () => { choices.splice(i, 1); renderChoicesList(); });
+    row.appendChild(inp); if (choices.length > 1) row.appendChild(btn);
+    choicesList.appendChild(row);
+  });
+  updateShareUrl();
+}
+
+document.getElementById('add-choice-btn').addEventListener('click', () => {
+  choices.push(''); renderChoicesList();
+  const inputs = choicesList.querySelectorAll('input');
+  inputs[inputs.length - 1].focus();
+});
+document.getElementById('apply-btn').addEventListener('click', () => {
+  choices = Array.from(choicesList.querySelectorAll('input')).map(i => i.value.trim()).filter(Boolean);
+  if (!choices.length) choices = ['yes', 'no'];
+  renderChoicesList(); buildFlower();
+  history.replaceState(null, '', buildShareUrl());
+});
+document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener('change', () => { mode = r.value; updateShareUrl(); }));
+
+const toggleBtn = document.getElementById('toggle-settings');
+const choicesPanel = document.getElementById('choices-panel');
+toggleBtn.addEventListener('click', () => {
+  const hidden = choicesPanel.style.display === 'none';
+  choicesPanel.style.display = hidden ? 'flex' : 'none';
+  toggleBtn.textContent = hidden ? 'hide' : 'show';
+});
+
+copyBtn.addEventListener('click', () => {
+  const url = buildShareUrl();
+  navigator.clipboard.writeText(url).catch(() => { shareUrlEl.select(); document.execCommand('copy'); });
+  copyBtn.textContent = 'copied!'; copyBtn.classList.add('copied');
+  setTimeout(() => { copyBtn.textContent = 'copy link'; copyBtn.classList.remove('copied'); }, 2000);
+});
+
+function petalPath(w, h) {
+  return `M0,${-h} C${w},${-h*0.6} ${w},${h*0.6} 0,${h} C${-w},${h*0.6} ${-w},${-h*0.6} 0,${-h} Z`;
+}
+
+let petalEls = [];
+
+function buildFlower() {
+  group.innerHTML = ''; petalEls = [];
+  N = randInt(petalMin, petalMax);
+  remaining = N; clickCount = 0;
+  updateCounter();
+  msgEl.style.opacity = 0; clearTimeout(msgTimer);
+  document.querySelectorAll('.falling-petal').forEach(el => el.remove());
+
+  const centerR = 10 + N * 0.35;
+  document.getElementById('centerOuter').setAttribute('r', centerR + 8);
+  document.getElementById('centerInner').setAttribute('r', centerR);
+
+  const petals = [];
+  for (let i = 0; i < N; i++) {
+    const angle = i * PHI, r = (centerR + 8) + 4 + (i / N) * 32, t = i / N;
+    petals.push({ r, angle, t });
+  }
+  petals.sort((a, b) => a.r - b.r);
+
+  petals.forEach(({ r, angle, t }) => {
+    const cx = Math.sin(angle) * r, cy = -Math.cos(angle) * r;
+    const deg = angle * 180 / Math.PI;
+    const pw = 7 + t * 6, ph = 22 + t * 14;
+    const hue = 50 + t * 25, light = 94 - t * 9;
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'petal-g');
+    g.setAttribute('transform', `translate(${cx},${cy}) rotate(${deg})`);
+    Object.assign(g.dataset, { cx, cy, deg, pw, ph, hue, light });
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', petalPath(pw, ph));
+    path.setAttribute('fill', `hsl(${hue},82%,${light}%)`);
+    path.setAttribute('stroke', `hsl(${hue-8},55%,${light-19}%)`);
+    path.setAttribute('stroke-width', '0.8');
+    g.appendChild(path);
+    g.addEventListener('click', onPetalClick);
+    group.appendChild(g);
+    petalEls.push(g);
+  });
+}
+
+function updateCounter() {
+  counterEl.textContent = remaining > 0 ? remaining + ' petal' + (remaining !== 1 ? 's' : '') + ' remaining' : 'all petals gone';
+}
+
+function getVisiblePetals() {
+  return petalEls.filter(g => !g.dataset.removed);
+}
+
+function removePetal(g, isSecond) {
+  g.dataset.removed = 'true';
+  g.style.display = 'none';
+  const { cx, cy, deg, pw, ph, hue, light } = g.dataset;
+  setTimeout(() => launchFallingPetal(parseFloat(cx), parseFloat(cy), parseFloat(deg), parseFloat(pw), parseFloat(ph), parseFloat(hue), parseFloat(light)), isSecond ? 80 : 0);
+}
+
+function onPetalClick(e) {
+  const g = e.currentTarget;
+  if (g.dataset.removed) return;
+
+  const isDouble = remaining > 1 && Math.random() * 100 < doubleChance;
+
+  if (isDouble) {
+    const visible = getVisiblePetals().filter(p => p !== g);
+    const other = visible[Math.floor(Math.random() * visible.length)];
+    removePetal(g, false);
+    const phrase1 = getPhrase(clickCount); clickCount++; remaining--;
+    removePetal(other, true);
+    const phrase2 = getPhrase(clickCount); clickCount++; remaining--;
+    updateCounter();
+    msgEl.classList.add('double-flash');
+    setTimeout(() => msgEl.classList.remove('double-flash'), 400);
+    showMessage(phrase1 + '  ·  ' + phrase2, remaining === 0);
+  } else {
+    removePetal(g, false);
+    const phrase = getPhrase(clickCount); clickCount++; remaining--;
+    updateCounter();
+    showMessage(phrase, remaining === 0);
+  }
+}
+
+function launchFallingPetal(cx, cy, deg, pw, ph, hue, light) {
+  const svgRect = svgEl.getBoundingClientRect(), stageRect = stage.getBoundingClientRect();
+  const scale = svgRect.width / 360;
+  const svgCX = svgRect.left - stageRect.left + svgRect.width / 2;
+  const svgCY = svgRect.top - stageRect.top + svgRect.height / 2;
+  const startX = svgCX + cx * scale, startY = svgCY + cy * scale;
+  const div = document.createElement('div'); div.className = 'falling-petal';
+  div.style.left = startX + 'px'; div.style.top = startY + 'px';
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg2 = document.createElementNS(ns, 'svg');
+  svg2.setAttribute('width', pw * 2 * scale); svg2.setAttribute('height', ph * 2 * scale);
+  svg2.setAttribute('viewBox', `${-pw} ${-ph} ${pw*2} ${ph*2}`);
+  const p2 = document.createElementNS(ns, 'path');
+  p2.setAttribute('d', petalPath(pw, ph));
+  p2.setAttribute('fill', `hsl(${hue},82%,${light}%)`);
+  p2.setAttribute('stroke', `hsl(${hue-8},55%,${light-19}%)`);
+  p2.setAttribute('stroke-width', '0.8');
+  svg2.appendChild(p2); div.appendChild(svg2); stage.appendChild(div);
+  const vx = (Math.random() - 0.5) * 140, vy = -50 - Math.random() * 70;
+  const gravity = 190 + Math.random() * 90, spin = (Math.random() - 0.5) * 700, wobble = (Math.random() - 0.5) * 50;
+  const startTime = performance.now();
+  function animate(now) {
+    const t = (now - startTime) / 1000;
+    const x = startX + vx * t + wobble * Math.sin(t * 3);
+    const y = startY + vy * t + 0.5 * gravity * t * t;
+    const rot = deg + spin * t;
+    const opacity = Math.max(0, 1 - Math.max(0, t - 1.2) / 0.6);
+    div.style.left = x + 'px'; div.style.top = y + 'px';
+    div.style.transform = `translate(-50%,-50%) rotate(${rot}deg)`;
+    div.style.opacity = opacity;
+    if (opacity > 0 && y < stageRect.height + 100) requestAnimationFrame(animate);
+    else div.remove();
+  }
+  requestAnimationFrame(animate);
+}
+
+function showMessage(text, final) {
+  clearTimeout(msgTimer);
+  if (!text) return;
+  msgEl.textContent = final ? '✿ ' + text + ' ✿' : text;
+  msgEl.style.opacity = 1;
+  if (!final) msgTimer = setTimeout(() => { msgEl.style.opacity = 0; }, 1600);
+}
+
+document.getElementById('resetBtn').addEventListener('click', buildFlower);
+
+loadFromUrl();
+renderChoicesList();
+buildFlower();
+</script>
+</body>
+</html>
