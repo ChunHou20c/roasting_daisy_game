@@ -75,7 +75,7 @@
     font-size: 15px; font-weight: 500; font-family: inherit; color: #1a1a18;
     background: #fff; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 999px;
     padding: 6px 20px; opacity: 0; transition: opacity 0.4s;
-    pointer-events: none; white-space: nowrap; max-width: 90%;
+    pointer-events: none; max-width: 90%; text-align: center;
   }
   #counter {
     position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
@@ -151,10 +151,37 @@
 
 <script>
 const PHI = Math.PI * (3 - Math.sqrt(5));
+const ROAST_CHANCE = 30;
+const DEFAULT_ROASTS = [
+  'a grown adult, consulting petals',
+  "this is the third time today, isn't it",
+  'bold of you to outsource decisions to flora',
+  'your therapist would have opinions',
+  'free will is right there',
+  'even the flower is tired of this',
+  "decision fatigue, or just plain laziness",
+  'somewhere, a botanist is crying'
+];
+let roasts = DEFAULT_ROASTS;
 let choices = ['yes', 'no', 'maybe'];
 let mode = 'sequence';
 let petalMin = 13, petalMax = 34, doubleChance = 20;
 let N = 21, remaining = 0, clickCount = 0, msgTimer;
+
+async function loadRoasts() {
+  const p = new URLSearchParams(window.location.search);
+  const name = p.get('roasts');
+  const file = name && /^[a-z0-9_-]+\.json$/i.test(name) ? name : 'roasts.json';
+  try {
+    const res = await fetch(file);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      const cleaned = data.filter(s => typeof s === 'string' && s.trim()).map(s => s.trim());
+      if (cleaned.length) roasts = cleaned;
+    }
+  } catch (_) { /* keep defaults */ }
+}
 
 const svgEl = document.getElementById('flowerSvg');
 const group = document.getElementById('petalsGroup');
@@ -325,6 +352,7 @@ function onPetalClick(e) {
   if (g.dataset.removed) return;
 
   const isDouble = remaining > 1 && Math.random() * 100 < doubleChance;
+  let text;
 
   if (isDouble) {
     const visible = getVisiblePetals().filter(p => p !== g);
@@ -336,13 +364,18 @@ function onPetalClick(e) {
     updateCounter();
     msgEl.classList.add('double-flash');
     setTimeout(() => msgEl.classList.remove('double-flash'), 400);
-    showMessage(phrase1 + '  ·  ' + phrase2, remaining === 0);
+    text = phrase1 + '  ·  ' + phrase2;
   } else {
     removePetal(g, false);
     const phrase = getPhrase(clickCount); clickCount++; remaining--;
     updateCounter();
-    showMessage(phrase, remaining === 0);
+    text = phrase;
   }
+
+  if (roasts.length && Math.random() * 100 < ROAST_CHANCE) {
+    text += '  ·  ' + roasts[Math.floor(Math.random() * roasts.length)];
+  }
+  showMessage(text, remaining === 0);
 }
 
 function launchFallingPetal(cx, cy, deg, pw, ph, hue, light) {
@@ -394,6 +427,7 @@ document.getElementById('resetBtn').addEventListener('click', buildFlower);
 loadFromUrl();
 renderChoicesList();
 buildFlower();
+loadRoasts();
 </script>
 </body>
 </html>
