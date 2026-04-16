@@ -87,6 +87,20 @@
     border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: inherit;
   }
   #resetBtn:hover { background: rgba(255,255,255,0.1); }
+  #pickAnotherBtn {
+    position: absolute; bottom: 64px; left: 50%; transform: translate(-50%, 8px);
+    font-size: 14px; font-weight: 500; font-family: inherit; color: #1a1a18;
+    background: #fff; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 999px;
+    padding: 9px 22px; cursor: pointer; max-width: 90%; text-align: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s, transform 0.35s;
+  }
+  #pickAnotherBtn.show {
+    opacity: 1; pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+  #pickAnotherBtn:hover { background: #f0efe8; }
   .petal-g { cursor: pointer; }
   .petal-g:hover path { opacity: 0.75; }
   .double-flash { animation: flash 0.35s ease-out; }
@@ -146,6 +160,7 @@
       <circle id="centerInner" cx="0" cy="0" r="18" fill="#e6a800"/>
     </svg>
     <div id="message"></div>
+    <button id="pickAnotherBtn"></button>
   </div>
 </div>
 
@@ -164,6 +179,15 @@ const DEFAULT_ROASTS = [
 ];
 let roasts = DEFAULT_ROASTS;
 let roastsFile = 'roasts.json';
+const UI_STRINGS = {
+  en: { pickAnother: 'Not satisfied with the daisy? Pick another one' },
+  zh: { pickAnother: '不满意这朵雏菊？换一朵试试' }
+};
+function currentLang() {
+  const m = roastsFile.match(/^roasts\.([a-z]+)\.json$/i);
+  return m && UI_STRINGS[m[1].toLowerCase()] ? m[1].toLowerCase() : 'en';
+}
+function t(key) { return UI_STRINGS[currentLang()][key]; }
 let choices = ['yes', 'no', 'maybe'];
 let mode = 'sequence';
 let petalMin = 13, petalMax = 34, doubleChance = 20;
@@ -186,6 +210,7 @@ const group = document.getElementById('petalsGroup');
 const msgEl = document.getElementById('message');
 const counterEl = document.getElementById('counter');
 const stage = document.getElementById('stage');
+const pickAnotherBtn = document.getElementById('pickAnotherBtn');
 const choicesList = document.getElementById('choices-list');
 const shareUrlEl = document.getElementById('share-url');
 const copyBtn = document.getElementById('copy-btn');
@@ -213,7 +238,7 @@ doubleSlider.addEventListener('input', () => {
 
 function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
 
-function buildShareUrl() {
+function buildCurrentUrl() {
   const params = new URLSearchParams();
   params.set('mode', mode);
   params.set('choices', choices.join(','));
@@ -223,6 +248,7 @@ function buildShareUrl() {
   if (roastsFile !== 'roasts.json') params.set('roasts', roastsFile);
   return window.location.href.split('?')[0] + '?' + params.toString();
 }
+function buildShareUrl() { return buildCurrentUrl() + '&play=1'; }
 function updateShareUrl() { shareUrlEl.value = buildShareUrl(); }
 
 function loadFromUrl() {
@@ -238,6 +264,9 @@ function loadFromUrl() {
   if (p.has('roasts')) {
     const name = p.get('roasts');
     if (/^[a-z0-9_.-]+\.json$/i.test(name)) roastsFile = name;
+  }
+  if (p.get('play') === '1') {
+    document.getElementById('settings').style.display = 'none';
   }
   document.querySelectorAll('input[name="mode"]').forEach(r => r.checked = r.value === mode);
 }
@@ -270,7 +299,7 @@ document.getElementById('apply-btn').addEventListener('click', () => {
   choices = Array.from(choicesList.querySelectorAll('input')).map(i => i.value.trim()).filter(Boolean);
   if (!choices.length) choices = ['yes', 'no'];
   renderChoicesList(); buildFlower();
-  history.replaceState(null, '', buildShareUrl());
+  history.replaceState(null, '', buildCurrentUrl());
 });
 document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener('change', () => { mode = r.value; updateShareUrl(); }));
 
@@ -309,6 +338,8 @@ function buildFlower() {
   remaining = N; clickCount = 0;
   updateCounter();
   msgEl.style.opacity = 0; clearTimeout(msgTimer);
+  pickAnotherBtn.textContent = t('pickAnother');
+  pickAnotherBtn.classList.remove('show');
   document.querySelectorAll('.falling-petal').forEach(el => el.remove());
 
   const centerR = 10 + N * 0.35;
@@ -387,6 +418,9 @@ function onPetalClick(e) {
     text += '  ·  ' + roasts[Math.floor(Math.random() * roasts.length)];
   }
   showMessage(text, remaining === 0);
+  if (remaining === 0) {
+    setTimeout(() => pickAnotherBtn.classList.add('show'), 600);
+  }
 }
 
 function launchFallingPetal(cx, cy, deg, pw, ph, hue, light) {
@@ -434,6 +468,7 @@ function showMessage(text, final) {
 }
 
 document.getElementById('resetBtn').addEventListener('click', buildFlower);
+pickAnotherBtn.addEventListener('click', buildFlower);
 
 loadFromUrl();
 renderChoicesList();
