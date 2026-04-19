@@ -20,6 +20,7 @@ All state lives in URL query params:
 
 | param       | meaning                                                             |
 | ----------- | ------------------------------------------------------------------- |
+| `q`         | the question the daisy is being asked (shown above the flower)      |
 | `choices`   | comma-separated list of phrases, one shown per plucked petal        |
 | `mode`      | `sequence` (cycle the list) or `random`                             |
 | `pmin`      | minimum petal count (re-randomized on every new flower)             |

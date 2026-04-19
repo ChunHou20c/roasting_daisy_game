@@ -80,11 +80,22 @@
     pointer-events: none; max-width: 90%; text-align: center;
   }
   #counter {
-    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 12px; right: 16px;
     font-size: 13px; color: #c5cec8; white-space: nowrap;
   }
+  #question {
+    position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    font-size: 15px; font-weight: 500; font-style: italic; color: #e8ece9;
+    max-width: 80%; text-align: center; padding: 0 12px;
+  }
+  .question-input {
+    flex: 1; font-size: 13px; padding: 5px 10px; height: 32px;
+    border: 0.5px solid rgba(0,0,0,0.25); border-radius: 6px;
+    background: #fff; color: #1a1a18; font-family: inherit; outline: none;
+  }
+  .question-input:focus { border-color: rgba(0,0,0,0.5); }
   #pickAnotherBtn {
-    position: absolute; top: 16px; left: 50%; transform: translate(-50%, -8px);
+    position: absolute; top: 54px; left: 50%; transform: translate(-50%, -8px);
     font-size: 14px; font-weight: 500; font-family: inherit; color: #1a1a18;
     background: #fff; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 999px;
     padding: 9px 22px; cursor: pointer; max-width: 90%; text-align: center;
@@ -112,6 +123,10 @@
       <button id="toggle-settings">hide</button>
     </div>
     <div id="choices-panel">
+      <div class="settings-row">
+        <label>question:</label>
+        <input type="text" id="question-input" class="question-input">
+      </div>
       <div class="settings-row">
         <label>language:</label>
         <label class="mode-opt"><input type="radio" name="lang" value="en"> en</label>
@@ -155,6 +170,7 @@
   </div>
   <div id="stage">
     <div id="counter"></div>
+    <div id="question"></div>
     <svg id="flowerSvg" width="360" height="360" viewBox="-180 -180 360 360" xmlns="http://www.w3.org/2000/svg">
       <g id="petalsGroup"></g>
       <circle id="centerOuter" cx="0" cy="0" r="30" fill="#f5c842" stroke="#c89610" stroke-width="1.5"/>
@@ -180,9 +196,10 @@ const DEFAULT_ROASTS = [
 ];
 let roasts = DEFAULT_ROASTS;
 let roastsFile = 'roasts.json';
+let question = '';
 const UI_STRINGS = {
-  en: { pickAnother: 'Not satisfied with the daisy? Pick another one' },
-  zh: { pickAnother: '不满意这朵雏菊？换一朵试试' }
+  en: { pickAnother: 'Not satisfied with the daisy? Pick another one', questionPlaceholder: "what's the question?" },
+  zh: { pickAnother: '不满意这朵雏菊？换一朵试试', questionPlaceholder: '你想问什么？' }
 };
 function currentLang() {
   const m = roastsFile.match(/^roasts\.([a-z]+)\.json$/i);
@@ -212,6 +229,8 @@ const msgEl = document.getElementById('message');
 const counterEl = document.getElementById('counter');
 const stage = document.getElementById('stage');
 const pickAnotherBtn = document.getElementById('pickAnotherBtn');
+const questionInput = document.getElementById('question-input');
+const questionEl = document.getElementById('question');
 const choicesList = document.getElementById('choices-list');
 const shareUrlEl = document.getElementById('share-url');
 const copyBtn = document.getElementById('copy-btn');
@@ -247,6 +266,7 @@ function buildCurrentUrl() {
   params.set('pmax', petalMax);
   params.set('double', doubleChance);
   if (roastsFile !== 'roasts.json') params.set('roasts', roastsFile);
+  if (question.trim()) params.set('q', question.trim());
   return window.location.href.split('?')[0] + '?' + params.toString();
 }
 function buildShareUrl() { return buildCurrentUrl() + '&play=1'; }
@@ -268,6 +288,7 @@ function loadFromUrl() {
   } else if ((navigator.language || '').toLowerCase().startsWith('zh')) {
     roastsFile = 'roasts.zh.json';
   }
+  if (p.has('q')) question = p.get('q');
   if (p.get('play') === '1') {
     document.getElementById('settings').style.display = 'none';
   }
@@ -312,8 +333,14 @@ document.querySelectorAll('input[name="lang"]').forEach(r => r.addEventListener(
   roastsFile = r.value === 'zh' ? 'roasts.zh.json' : 'roasts.json';
   loadRoasts();
   pickAnotherBtn.textContent = t('pickAnother');
+  questionInput.placeholder = t('questionPlaceholder');
   updateShareUrl();
 }));
+questionInput.addEventListener('input', () => {
+  question = questionInput.value;
+  questionEl.textContent = question;
+  updateShareUrl();
+});
 
 const toggleBtn = document.getElementById('toggle-settings');
 const choicesPanel = document.getElementById('choices-panel');
@@ -482,6 +509,9 @@ function showMessage(text, final) {
 pickAnotherBtn.addEventListener('click', buildFlower);
 
 loadFromUrl();
+questionInput.value = question;
+questionInput.placeholder = t('questionPlaceholder');
+questionEl.textContent = question;
 renderChoicesList();
 buildFlower();
 loadRoasts();
